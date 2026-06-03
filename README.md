@@ -2,61 +2,54 @@
 
 ## Project Title & Brief Description
 
-I chose the **Personal Task Manager** exercise — a full-stack to-do application where a single user can create, view, update, and delete tasks without authentication. The app supports optional descriptions and due dates, completion toggling, status filters, search, overdue highlighting, and persistent storage via MongoDB so data survives server restarts.
+This project implements the **Personal Task Manager** exercise: a full-stack to-do app for a single user (no authentication). Users can add tasks with a required title plus optional description and due date, view tasks sorted newest first, toggle completion, edit details, delete with confirmation, and filter by All / Active / Completed. The UI also shows active vs completed counts, highlights overdue tasks, supports search by title, and persists data in MongoDB across server restarts.
 
 ---
 
 ## Live Demo Links
 
-| Environment | URL |
-|-------------|-----|
-| **Frontend** | _Add after deployment — e.g. `https://your-app.vercel.app`_ |
-| **API** | _Add after deployment — e.g. `https://your-api.onrender.com`_ |
+| | URL |
+|---|-----|
+| **Application** | [https://task-manager1212.netlify.app](https://task-manager1212.netlify.app) |
+| **API** | `https://task-manager-production-87bd.up.railway.app` |
 
-> **Reviewer note:** If links are not yet live, follow [How to Run Locally](#how-to-run-locally) below. Deployment steps are in [Deployment](#deployment-optional).
+The frontend is hosted on Netlify; the REST API runs on Railway with MongoDB Atlas.
 
 ---
 
 ## Tech Stack
 
-| Layer | Technology | Why |
-|-------|------------|-----|
-| **Frontend** | React 19 + Vite | Fast dev experience, component model, widely understood by reviewers |
-| **HTTP client** | Axios | Simple interceptors and error handling for REST calls |
-| **Backend** | Node.js + Express 5 | Lightweight REST API with familiar middleware patterns |
-| **Database** | MongoDB + Mongoose | Document model fits task shape; persistence across restarts (bonus requirement) |
-| **Config** | dotenv | Keeps secrets out of source control |
+| Layer | Tools | Why |
+|-------|-------|-----|
+| Frontend | React 19, Vite | Component-based UI with fast local development and production builds |
+| HTTP | Axios | Straightforward REST calls and error handling from the client |
+| Backend | Node.js, Express 5 | Simple REST API with middleware for CORS, JSON, and errors |
+| Database | MongoDB, Mongoose | Document model matches task fields; data persists after restarts |
+| Config | dotenv | Environment variables for database URL and port (not committed) |
 
 ---
 
 ## How to Run Locally
 
-**Prerequisites:** [Node.js](https://nodejs.org/) 18+ only. You also need a MongoDB instance (local install or free [MongoDB Atlas](https://www.mongodb.com/cloud/atlas) cluster).
+**Prerequisite:** [Node.js](https://nodejs.org/) 18+ and a MongoDB instance (local or [MongoDB Atlas](https://www.mongodb.com/cloud/atlas)).
 
-### 1. Clone and configure the API
+**Terminal 1 — API**
 
 ```bash
 cd server
 cp .env.example .env
 ```
 
-Edit `server/.env`:
-
-```env
-MONGO_URI=mongodb://127.0.0.1:27017/task-manager
-PORT=3001
-```
-
-For Atlas, replace `MONGO_URI` with your connection string.
+Edit `server/.env` and set `MONGO_URI` (local: `mongodb://127.0.0.1:27017/task-manager`, or your Atlas connection string).
 
 ```bash
 npm install
 npm run dev
 ```
 
-You should see: `MongoDB connected` and `Server running on http://localhost:3001`.
+Wait for `MongoDB connected` and `Server running on http://localhost:3001`.
 
-### 2. Start the frontend (new terminal)
+**Terminal 2 — Frontend**
 
 ```bash
 cd client
@@ -64,9 +57,9 @@ npm install
 npm run dev
 ```
 
-Open **http://localhost:5173** in your browser.
+Open **http://localhost:5173**. The client uses `http://localhost:3001` for the API by default.
 
-### 3. Quick health check
+**Verify the API**
 
 ```bash
 curl http://localhost:3001/
@@ -77,17 +70,18 @@ curl http://localhost:3001/tasks
 
 ## API Documentation
 
-Base URL (local): `http://localhost:3001`
+**Base URL (local):** `http://localhost:3001`  
+**Base URL (production):** `https://task-manager-production-87bd.up.railway.app`
 
-All request/response bodies are `application/json`. Errors return `{ "message": "..." }`.
+All bodies are JSON. Errors: `{ "message": "string" }`.
 
-### Task object (response shape)
+### Task object
 
 ```json
 {
   "_id": "665f1a2b3c4d5e6f7a8b9c0d",
   "title": "Buy groceries",
-  "description": "Milk, eggs, bread",
+  "description": "Milk and eggs",
   "dueDate": "2026-06-10T00:00:00.000Z",
   "completed": false,
   "createdAt": "2026-06-03T10:00:00.000Z",
@@ -95,129 +89,75 @@ All request/response bodies are `application/json`. Errors return `{ "message": 
 }
 ```
 
-`dueDate` is `null` when not set. `description` defaults to `""`.
+`dueDate` may be `null`. `description` defaults to `""`.
 
 ---
 
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/` | Health check |
+| GET | `/tasks` | List tasks (newest first) |
+| POST | `/tasks` | Create task |
+| PATCH | `/tasks/:id` | Update task |
+| PUT | `/tasks/:id/toggle` | Toggle completed |
+| DELETE | `/tasks/:id` | Delete task |
+
 ### `GET /`
 
-Health check.
-
-**Response `200`:**
+**Response `200`**
 
 ```json
 { "message": "Task Manager API", "version": "1.0.0" }
 ```
 
----
-
 ### `GET /tasks`
 
-List tasks, newest first.
-
-**Query parameters (optional):**
+**Query (optional)**
 
 | Param | Values | Description |
 |-------|--------|-------------|
-| `status` | `active` \| `completed` | Filter by completion |
+| `status` | `active`, `completed` | Filter by completion |
 | `search` | string | Case-insensitive title search |
 
-**Response `200`:** Array of task objects.
-
-**Example:**
-
-```bash
-curl "http://localhost:3001/tasks?status=active&search=grocery"
-```
-
----
+**Response `200`:** `Task[]`
 
 ### `POST /tasks`
 
-Create a task.
+**Request body**
 
-**Request body:**
+| Field | Type | Required |
+|-------|------|----------|
+| `title` | string | Yes |
+| `description` | string | No |
+| `dueDate` | string (ISO date) | No |
 
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| `title` | string | Yes | Non-empty after trim |
-| `description` | string | No | Optional notes |
-| `dueDate` | string (ISO date) | No | e.g. `"2026-06-15"` |
-
-**Response `201`:** Created task object.
-
+**Response `201`:** Task  
 **Response `400`:** `{ "message": "Title is required" }`
-
-**Example:**
-
-```bash
-curl -X POST http://localhost:3001/tasks \
-  -H "Content-Type: application/json" \
-  -d '{"title":"Write README","description":"For submission","dueDate":"2026-06-05"}'
-```
-
----
 
 ### `PATCH /tasks/:id`
 
-Update one or more fields.
+**Request body (all optional)**
 
-**Request body (all optional):**
+| Field | Type |
+|-------|------|
+| `title` | string |
+| `description` | string |
+| `dueDate` | string or `null` |
+| `completed` | boolean |
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `title` | string | Must be non-empty if sent |
-| `description` | string | |
-| `dueDate` | string \| `null` | Set `null` to clear |
-| `completed` | boolean | Set completion directly |
-
-**Response `200`:** Updated task object.
-
-**Response `400`:** Invalid ID or empty title.
-
+**Response `200`:** Task  
 **Response `404`:** `{ "message": "Task not found" }`
-
-**Example:**
-
-```bash
-curl -X PATCH http://localhost:3001/tasks/TASK_ID \
-  -H "Content-Type: application/json" \
-  -d '{"title":"Updated title","dueDate":null}'
-```
-
----
 
 ### `PUT /tasks/:id/toggle`
 
-Toggle `completed` between `true` and `false`.
+**Request body:** none  
 
-**Request body:** None.
-
-**Response `200`:** Updated task object.
-
-**Response `404`:** Task not found.
-
-**Example:**
-
-```bash
-curl -X PUT http://localhost:3001/tasks/TASK_ID/toggle
-```
-
----
+**Response `200`:** Task (with toggled `completed`)
 
 ### `DELETE /tasks/:id`
 
-Delete a task.
-
-**Response `200`:** `{ "message": "Task deleted successfully" }`
-
-**Response `404`:** Task not found.
-
-**Example:**
-
-```bash
-curl -X DELETE http://localhost:3001/tasks/TASK_ID
-```
+**Response `200`:** `{ "message": "Task deleted successfully" }`  
+**Response `404`:** `{ "message": "Task not found" }`
 
 ---
 
@@ -225,67 +165,36 @@ curl -X DELETE http://localhost:3001/tasks/TASK_ID
 
 ```
 task-manager/
-├── client/                    # React frontend (Vite)
-│   ├── src/
-│   │   ├── components/        # TaskForm, TaskItem — presentational UI
-│   │   ├── hooks/             # useTasks — data fetching & mutations
-│   │   ├── services/          # api.js — Axios client & endpoint helpers
-│   │   ├── utils/             # taskHelpers, apiErrors
-│   │   ├── App.jsx            # Page layout & user flows
-│   │   ├── App.css            # Component styles
-│   │   └── index.css          # Design tokens & global styles
-│   ├── .env.example           # VITE_API_URL for production API
-│   └── package.json
-├── server/                    # Express REST API
-│   ├── models/
-│   │   └── Task.js            # Mongoose schema
-│   ├── routes/
-│   │   └── tasks.js           # CRUD route handlers
-│   ├── middleware/
-│   │   └── errorHandler.js    # Centralised error responses
-│   ├── app.js                 # App entry, MongoDB connection
-│   ├── .env.example           # MONGO_URI, PORT
-│   └── package.json
-├── .gitignore
+├── client/                 # React + Vite frontend
+│   └── src/
+│       ├── components/     # TaskForm, TaskItem
+│       ├── hooks/          # useTasks (fetch & mutations)
+│       ├── services/       # Axios API client
+│       ├── utils/          # Helpers (dates, errors)
+│       ├── App.jsx         # Main page & layout
+│       └── App.css         # UI styles
+├── server/                 # Express API
+│   ├── models/Task.js      # Mongoose schema
+│   ├── routes/tasks.js     # REST handlers
+│   ├── middleware/         # Error handling
+│   ├── app.js              # Server entry
+│   └── .env.example        # MONGO_URI, PORT template
 └── README.md
 ```
 
 ---
 
-## Features Implemented
-
-### Must have
-- [x] Add task (title required, optional description & due date)
-- [x] View all tasks, sorted by creation date (newest first)
-- [x] Toggle complete / incomplete
-- [x] Edit title, description, due date
-- [x] Delete with confirmation prompt
-- [x] Filter: All, Active, Completed
-
-### Should have
-- [x] Active vs completed counts
-- [x] Overdue tasks visually distinguished
-- [x] Empty state UI
-
-### Bonus
-- [x] Search by title
-- [x] MongoDB persistence
-- [ ] Drag-and-drop reorder (not implemented)
-
----
-
 ## Next Steps
 
-**Chose not to implement (scope / time):**
-- User authentication and multi-user accounts
-- Drag-and-drop task reordering
-- Automated test suite
-- Offline support / PWA
+**Not implemented**
 
-**Would build next:**
-1. **Deployment** — host API on Render/Railway and frontend on Vercel; wire `VITE_API_URL` to production API.
-2. **Tests** — API integration tests (Supertest) and component tests (Vitest + React Testing Library).
-3. **Accessibility audit** — keyboard shortcuts, focus trap in edit mode, `aria-live` for mutation feedback.
-4. **Due-date reminders** — email or browser notifications for upcoming/overdue tasks.
+- User authentication / multi-user support  
+- Drag-and-drop task reordering  
+- Automated tests (API or UI)  
 
----
+**Planned improvements**
+
+- Expand test coverage (Supertest for API, Vitest for components)  
+- Custom delete confirmation modal instead of `window.confirm`  
+- Due-date reminders (notifications or email)  
+- Keyboard shortcuts and deeper accessibility review  
