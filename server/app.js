@@ -10,12 +10,7 @@ const app = express();
 
 app.use(
   cors({
-    origin: [
-      "https://task-manager1212.netlify.app",
-      "https://6a201859781b0e00089c860c--task-manager1212.netlify.app"
-    ],
-    methods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
-    credentials: true
+    origin: "*"
   })
 );
 
