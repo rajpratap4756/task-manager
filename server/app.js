@@ -8,7 +8,18 @@ const errorHandler = require("./middleware/errorHandler");
 
 const app = express();
 
-app.use(cors());
+const cors = require("cors");
+
+app.use(
+  cors({
+    origin: [
+      "https://task-manager1212.netlify.app",
+      "https://6a201859781b0e00089c860c--task-manager1212.netlify.app"
+    ],
+    methods: ["GET", "POST", "PUT", "DELETE"],
+    credentials: true
+  })
+);
 app.use(express.json());
 
 if (!process.env.MONGO_URI) {
