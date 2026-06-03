@@ -1,7 +1,7 @@
 import axios from "axios";
 
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || "http://task-manager-production-c237.up.railway.app",
+  baseURL: import.meta.env.VITE_API_URL || "https://task-manager-production-c237.up.railway.app",
 });
 
 export const getTasks = (params = {}) => api.get("/tasks", { params });
